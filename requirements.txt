@@ -1,0 +1,16 @@
+# serverul și verificarea
+fastapi>=0.110
+uvicorn>=0.29
+python-multipart>=0.0.9
+opencv-python>=4.9
+numpy>=1.26
+pillow>=10
+faster-whisper>=1.0
+imageio-ffmpeg>=0.5
+qrcode>=7.4
+anthropic>=0.40
+
+# doar pentru teste, setul de test și capturi
+pytest>=8
+edge-tts>=6.1
+playwright>=1.40

@@ -1,0 +1,14 @@
+# Datele serverului (campanii, clipuri încărcate, baza de date): se creează la prima pornire
+/data/
+
+# Setul de test: clipuri TikTok reale ale altor creatori, nu le publicăm.
+# Rămân doar logo-urile inventate și regulile, ca demo-ul și evaluarea să pornească.
+eval/data/*
+!eval/data/logo_brisa.png
+!eval/data/logo_volta.png
+!eval/data/rules.json
+
+__pycache__/
+*.pyc
+*.log
+.pytest_cache/

@@ -1,0 +1,22 @@
+{
+ "brand": "Brisa Zero",
+ "language": "ro",
+ "min_duration_s": 10,
+ "max_duration_s": 30,
+ "logo_min_seconds": 3,
+ "must_say": [
+  "Brisa Zero",
+  "fără zahăr"
+ ],
+ "must_not_say": [
+  "alcool",
+  "Cola",
+  "gratis"
+ ],
+ "caption_must_include": [
+  "#ad",
+  "#brisazero"
+ ],
+ "caption_must_not_include": [],
+ "manual": []
+}
