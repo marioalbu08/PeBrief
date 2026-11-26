@@ -2,7 +2,7 @@
 
 **Problema.** O agenție care lucrează cu sute de creatori verifică fiecare draft de mână, față de brief: se vede logo-ul destul, s-a spus numele produsului exact, apare #ad, a scăpat vreun cuvânt interzis. Urmează runde de mesaje („logo-ul nu se vede”, „ba se vede”), orgolii și plăți întârziate. Campania Beach, Please! din aprilie 2026 a avut „sute de influenceri internaționali”.
 
-**Ce face PeBrief.** Brief-ul devine un contract cu reguli verificabile. Creatorul încarcă draftul de pe telefon și primește în câteva secunde un verdict cu **secunda exactă** și cadrul-dovadă: *„Logo-ul se vede 2,3 s din 3 s cerute, în 0:00.6–0:03.0”*, *„La 0:02.1 ai spus «Brisa», dar brief-ul cere exact «Brisa Zero»”*. Cu un cadru și o secundă în față, nu mai ai cu cine să te cerți. Când draftul trece, onorariul e rezervat și se eliberează la publicare.
+**Ce face PeBrief.** Brief-ul devine un contract cu reguli verificabile. Creatorul încarcă draftul de pe telefon și primește, cam în cât durează clipul, un verdict cu **secunda exactă** și cadrul-dovadă: *„Logo-ul se vede 2,3 s din 3 s cerute, în 0:00.6–0:03.0”*, *„La 0:02.1 ai spus «Brisa», dar brief-ul cere exact «Brisa Zero»”*. Cu un cadru și o secundă în față, nu mai ai cu cine să te cerți. Când draftul trece, onorariul e rezervat și se eliberează la publicare.
 
 Totul rulează local. Video-ul nu pleacă nicăieri. Doar textul brief-ului ajunge la Claude.
 
@@ -22,7 +22,7 @@ python server.py
 
 Prima pornire descarcă modelul whisper `medium` (cam 1,5 GB), apoi îl ține în cache. Campania demo „Brisa Zero” se creează singură. ffmpeg vine prin `imageio-ffmpeg`, nu trebuie instalat separat. Fără Claude (fără `claude` în PATH și fără `ANTHROPIC_API_KEY`), brief-ul se citește cu parserul offline, pe șablon.
 
-## Cum se folosește (demo în fața juriului)
+## Cum se folosește
 
 1. **Agenția:** „Campanie nouă” → lipești brief-ul așa cum a venit, încarci logo-ul (sau poza produsului) → Claude scoate regulile. Ce nu se poate verifica automat (ton, lumină) ajunge la „Verifică un om”, nu e ignorat.
 2. **Creatorul:** scanează QR-ul, filmează 15 s cu produsul, scrie descrierea → verdictul apare cu linia de timp: verde pentru logo, albastru pentru frazele cerute, roșu pentru cuvintele interzise. Click pe orice dovadă și video-ul sare la secunda respectivă. Peste video, un chenar verde urmărește logo-ul găsit.

@@ -102,7 +102,7 @@ async function campaign(id) {
         <div class="card row" style="align-items:flex-start;gap:16px">
           <img class="qr" src="/api/qr?url=${encodeURIComponent(url)}" alt="cod QR">
           <div><h2>Link pentru creatori</h2>
-            <div class="small mute">Creatorul scanează codul cu telefonul, filmează și primește verdictul în câteva secunde.</div>
+            <div class="small mute">Creatorul scanează codul cu telefonul, filmează și primește verdictul cam în cât durează clipul.</div>
             <div style="margin-top:8px"><a href="#/u/${id}">${esc(url)}</a></div>
             ${c.has_logo ? `<img src="/api/campaigns/${id}/logo" style="max-width:140px;margin-top:10px;border-radius:8px">` : '<div class="err small">Fără logo: verificarea de logo e oprită.</div>'}
           </div>
@@ -149,7 +149,7 @@ async function upload(id) {
     <div class="grid g2">
       <form id="f" class="card">
         <h1 style="font-size:22px">${esc(c.title)}</h1>
-        <div class="small mute">Încarcă draftul înainte să-l postezi. Primești pe loc ce trebuie refăcut, cu secunda exactă.</div>
+        <div class="small mute">Încarcă draftul înainte să-l postezi. Afli ce trebuie refăcut, cu secunda exactă, cam în cât durează clipul.</div>
         <label>Numele tău</label><input type="text" name="creator" required value="${esc(name)}" placeholder="@contul_tau">
         <label>Clipul</label><input type="file" name="video" accept="video/*" required>
         <label>Descrierea pe care o vei posta</label><input type="text" name="caption" placeholder="text + hashtag-uri">

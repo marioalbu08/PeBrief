@@ -4,7 +4,7 @@
 
 ## Setul de test
 
-Clipuri TikTok verticale reale, cu creatori care vorbesc în engleză (din `drive-download-…zip`), peste care am pus:
+Clipuri TikTok verticale reale, cu creatori care vorbesc în engleză, peste care am pus (clipurile nu sunt în repo, fiindcă sunt ale altor creatori):
 
 - **logo-ul inventat „Brisa Zero”**, mișcat ca un produs ținut în mână: lățime 16–42% din cadru, rotație ±22°, perspectivă până la 14%, blur până la σ=1,6, lumină 0,7–1,15×, tremur. Unul sau două intervale; total 0 s, 1–2,5 s (sub pragul de 3 s) sau 3,5–7 s;
 - **un logo-capcană „VOLTA”** în 30% din clipuri, care nu trebuie numărat (un clip are oricum logo-ul Supabase pe ecran);
@@ -68,4 +68,4 @@ python eval/logo_only.py final     # doar logo-ul, mai repede
 python eval/ncc_stats.py clips     # distribuția corelației pentru prag
 ```
 
-Rezultatele brute, clip cu clip, sunt în `eval/results*.json`, iar jurnalele în `eval/data/eval-*.log`.
+Rezultatele brute, clip cu clip, sunt în `eval/results*.json`.
