@@ -31,17 +31,23 @@ def sample_frames(path: str, step_s: float, max_side: int = 720):
     """Generează (t, cadru BGR redimensionat), câte un cadru la `step_s` secunde.
 
     Citește secvențial (grab) în loc de seek, fiindcă seek-ul pe H.264 de
-    telefon e lent și uneori inexact.
+    telefon e lent și uneori inexact. Secunda fiecărui cadru vine din timestamp-ul
+    lui, nu din număr / fps: la cadre pe secundă variabile, a doua formulă greșește
+    cu secunde.
     """
     cap = cv2.VideoCapture(path)
     fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
     idx = 0
     next_t = 0.0
+    last_t = -1.0
     while True:
         ok = cap.grab()
         if not ok:
             break
-        t = idx / fps
+        t = cap.get(cv2.CAP_PROP_POS_MSEC) / 1000.0
+        if not t > last_t:  # containerul nu dă timpul cadrului
+            t = max(idx / fps, last_t + 1e-3)
+        last_t = t
         if t + 1e-6 >= next_t:
             ok, frame = cap.retrieve()
             if not ok:
@@ -51,7 +57,8 @@ def sample_frames(path: str, step_s: float, max_side: int = 720):
             if s < 1:
                 frame = cv2.resize(frame, (int(w * s), int(h * s)), interpolation=cv2.INTER_AREA)
             yield t, frame
-            next_t += step_s
+            while next_t <= t + 1e-6:  # după un gol între cadre, următorul eșantion e după cadrul ăsta
+                next_t += step_s
         idx += 1
     cap.release()
 

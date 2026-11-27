@@ -158,8 +158,12 @@ class LogoDetector:
         return res
 
 
-def to_intervals(samples: list[dict], step: float) -> list[dict]:
-    """samples: [{t, found, inliers}] în ordine. Întoarce intervale [t0, t1)."""
+def to_intervals(samples: list[dict], step: float, end: float | None = None) -> list[dict]:
+    """samples: [{t, found, inliers}] în ordine. Întoarce intervale [t0, t1).
+
+    Un eșantion acoperă `step` secunde, dar nu dincolo de finalul clipului (`end`):
+    altfel un logo arătat la final ar primi până la `step` secunde în plus.
+    """
     flags = [s["found"] for s in samples]
     n = len(flags)
     # umple golurile de un singur cadru
@@ -178,6 +182,8 @@ def to_intervals(samples: list[dict], step: float) -> list[dict]:
         if not f and start is not None:
             t0 = samples[start]["t"]
             t1 = samples[i - 1]["t"] + step
+            if end is not None:
+                t1 = max(samples[i - 1]["t"], min(t1, end))
             best = max(range(start, i), key=lambda j: samples[j]["inliers"])
             out.append({"t0": round(t0, 2), "t1": round(t1, 2), "best_t": samples[best]["t"]})
             start = None

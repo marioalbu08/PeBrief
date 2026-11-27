@@ -16,9 +16,12 @@ NUM = {"0": "zero", "1": "unu", "2": "doi", "3": "trei", "4": "patru", "5": "cin
 
 
 def norm(s: str) -> str:
+    """Litere mici, fără diacritice și fără punctuație. Păstrează literele din orice
+    alfabet (chirilic, grecesc): altfel o campanie în bulgară n-ar avea niciun cuvânt
+    de comparat, iar cuvintele interzise n-ar fi găsite niciodată."""
     s = unicodedata.normalize("NFKD", s.lower())
     s = "".join(c for c in s if not unicodedata.combining(c))
-    s = re.sub(r"[^a-z0-9# ]+", " ", s)
+    s = re.sub(r"[^\w#]+|_", " ", s)
     return " ".join(NUM.get(w, w) for w in s.split())
 
 
@@ -142,11 +145,26 @@ def find_all(words: list[dict], phrase: str, thresh: float = 0.8) -> list[dict]:
     return hits
 
 
+def caption_words(s: str) -> list[str]:
+    """Cuvintele normalizate ale unei descrieri. Un cuvânt care începe cu # sau @ își
+    păstrează semnul („@brand” nu e „#brand”), iar hashtag-urile lipite („#ad#brand”)
+    se despart."""
+    out = []
+    for w in re.sub(r"([#@])", r" \1", s).split():
+        mark = w[0] if w[0] in "#@" else ""
+        parts = norm(w[1:] if mark else w).replace("#", " ").split()
+        if parts:
+            parts[0] = mark + parts[0]
+        out += parts
+    return out
+
+
 def caption_has(caption: str, item: str) -> bool:
-    c = norm(caption)
-    it = norm(item)
-    if not it:
-        return True
-    if item.strip().startswith("#"):
-        return re.search(r"(^| )" + re.escape(it) + r"( |$)", c) is not None
-    return it in c
+    """Descrierea conține elementul ca cuvinte întregi, în ordine: „#ad” nu e găsit în
+    „#adidas”, „ad” nu e găsit în „adidas”, „@brand” nu e găsit în „#brand”."""
+    it = caption_words(item)
+    if not it:  # fără litere sau cifre (de exemplu un emoji): îl căutăm exact cum e scris
+        return item.strip() in caption
+    c = caption_words(caption)
+    k = len(it)
+    return any(c[i:i + k] == it for i in range(len(c) - k + 1))

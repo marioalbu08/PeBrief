@@ -3,6 +3,9 @@ from __future__ import annotations
 
 import os
 import threading
+import wave
+
+import numpy as np
 
 _model = None
 _lock = threading.Lock()
@@ -18,10 +21,21 @@ def get_model():
     return _model
 
 
+def load_wav(path: str) -> np.ndarray:
+    """WAV-ul mono, 16 kHz, pe 16 biți scos de `media.extract_audio`, ca float32 în [-1, 1]."""
+    with wave.open(path, "rb") as w:
+        if (w.getnchannels(), w.getsampwidth(), w.getframerate()) != (1, 2, 16000):
+            raise ValueError("sunetul extras nu e mono, 16 kHz, 16 biți")
+        data = w.readframes(w.getnframes())
+    return np.frombuffer(data, np.int16).astype(np.float32) / 32768.0
+
+
 def transcribe(wav: str, language: str = "ro", hint: str | None = None) -> dict:
     model = get_model()
+    # Sunetul pleacă la whisper ca șir de numere, nu ca fișier: cu fișier, faster-whisper
+    # îl deschide prin PyAV, iar PyAV 19 nu mai acceptă un argument pe care îl trimite.
     segs, info = model.transcribe(
-        wav,
+        load_wav(wav),
         language=language or None,
         word_timestamps=True,
         vad_filter=True,

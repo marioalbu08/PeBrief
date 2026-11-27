@@ -259,8 +259,10 @@ async function submission(id) {
   const pub = document.getElementById('pub');
   if (pub) pub.onsubmit = async e => {
     e.preventDefault();
+    const btn = pub.querySelector('button');
+    btn.disabled = true;  // un dublu clic trimite o singură cerere
     try { await api(`/api/submissions/${id}/publish`, {method:'POST', body:new FormData(pub)}); route(); }
-    catch (x) { document.getElementById('perr').textContent = x.message; }
+    catch (x) { document.getElementById('perr').textContent = x.message; btn.disabled = false; }
   };
 }
 

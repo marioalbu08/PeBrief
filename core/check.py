@@ -8,7 +8,7 @@ import cv2
 
 from . import media, speech
 from .logo import LogoDetector, load_logo, to_intervals
-from .textmatch import caption_has, find_all, find_phrase
+from .textmatch import caption_has, find_all, find_phrase, norm
 
 LOGO_STEP = 0.25  # secunde între cadrele verificate
 LOGO_MAX_SIDE = 1024  # la 720 px logo-urile mici se pierd (măsurat: eval/REZULTATE.md)
@@ -39,8 +39,14 @@ def run_check(video: str, rules: dict, caption: str = "", logo_path: str | None 
                        "detail": f"Clipul are {dur:.1f} s." + ("" if ok else f" Cerința: {want}."),
                        "evidence": []})
 
+    manual = list(rules.get("manual", []))
+
     # ---- logo
     logo_secs = None
+    if rules.get("logo_min_seconds") and not logo_path:
+        # Regula există, dar campania n-are imaginea logo-ului: nu o ignorăm în tăcere.
+        manual.append(f"Logo vizibil minim {rules['logo_min_seconds']:g} s: nu e verificat automat, "
+                      "fiindcă în campanie nu e încărcată imaginea logo-ului.")
     if logo_path and rules.get("logo_min_seconds"):
         progress(0.05, "Caut logo-ul cadru cu cadru")
         det = LogoDetector(load_logo(logo_path))
@@ -51,7 +57,7 @@ def run_check(video: str, rules: dict, caption: str = "", logo_path: str | None 
             samples.append({"t": round(t, 3), **r})
             if i % 8 == 0:
                 progress(0.05 + 0.45 * min(1, i / n_est), "Caut logo-ul cadru cu cadru")
-        intervals = to_intervals(samples, LOGO_STEP)
+        intervals = to_intervals(samples, LOGO_STEP, end=dur)
         logo_secs = sum(iv["t1"] - iv["t0"] for iv in intervals)
         need = rules["logo_min_seconds"]
         ok = logo_secs >= need - 1e-6
@@ -71,7 +77,15 @@ def run_check(video: str, rules: dict, caption: str = "", logo_path: str | None 
                        "detail": detail, "evidence": ev, "value": round(logo_secs, 2)})
 
     # ---- vorbirea
-    must, banned = rules.get("must_say", []), rules.get("must_not_say", [])
+    # O frază fără litere sau cifre (de exemplu doar un emoji) nu se poate auzi: o verifică un om.
+    must, banned = [], []
+    for src, dst, verb in ((rules.get("must_say", []), must, "Spune"),
+                           (rules.get("must_not_say", []), banned, "Nu spune")):
+        for ph in src:
+            if norm(ph):
+                dst.append(ph)
+            else:
+                manual.append(f"{verb} „{ph}”: nu se poate verifica după sunet.")
     transcript = None
     if must or banned:
         progress(0.55, "Ascult ce se spune")
@@ -137,11 +151,18 @@ def run_check(video: str, rules: dict, caption: str = "", logo_path: str | None 
                 cv2.imwrite(os.path.join(frames_dir, f"t{int(round(t * 1000))}.jpg"), f,
                             [cv2.IMWRITE_JPEG_QUALITY, 82])
 
+    if not checks:
+        # Fără nicio regulă verificabilă, verdictul nu poate fi „trece”, dar trebuie să spună de ce.
+        checks.append({"id": "no_rules", "label": "Reguli verificabile automat", "pass": False,
+                       "detail": "Brief-ul nu are nicio regulă pe care s-o verific automat (durată, logo, "
+                                 "fraze, descriere). Agenția trebuie să adauge reguli sau să verifice draftul de mână.",
+                       "evidence": []})
+
     progress(1.0, "Gata")
     return {
-        "pass": all(c["pass"] for c in checks) if checks else False,
+        "pass": all(c["pass"] for c in checks),
         "checks": checks,
-        "manual": rules.get("manual", []),
+        "manual": manual,
         "timeline": timeline,
         "transcript": transcript["text"] if transcript else None,
         "words": transcript["words"] if transcript else [],

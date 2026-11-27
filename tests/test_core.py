@@ -40,6 +40,22 @@ def test_caption():
     assert caption_has("Gust nou #BrisaZero", "#brisazero")
 
 
+def test_caption_matches_whole_words_only():
+    # „@brisazero” (brandul etichetat) nu e același lucru cu hashtag-ul „#brisazero”
+    assert not caption_has("Gust nou! #brisazero", "@brisazero")
+    assert caption_has("Gust nou cu @brisazero", "@brisazero")
+    assert not caption_has("Colaborare cu adidas", "ad")
+    assert caption_has("Gust nou!#ad#brisazero", "#ad")  # hashtag-uri lipite
+
+
+def test_other_alphabets():
+    # o campanie în bulgară: cuvântul interzis se aude, hashtag-ul lipsește
+    assert find_all(W("това е без алкохол"), "алкохол")
+    assert not caption_has("нова напитка", "#реклама")
+    assert caption_has("нова напитка #реклама", "#реклама")
+    assert find_phrase(W("опитайте Бриза Зеро днес"), "Бриза Зеро")["status"] == "ok"
+
+
 def test_offline_brief():
     r = parse_brief_offline(BRIEF_TEMPLATE)
     assert r["min_duration_s"] == 15 and r["max_duration_s"] == 30

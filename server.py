@@ -26,7 +26,7 @@ from core.paths import resolve, to_stored
 from core.rules import BRIEF_TEMPLATE, normalize_rules, parse_brief, parse_brief_offline
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
-DATA = os.path.join(ROOT, "data")
+DATA = os.environ.get("PEBRIEF_DATA") or os.path.join(ROOT, "data")  # testele folosesc un folder temporar
 DB = os.path.join(DATA, "pebrief.db")
 PORT = int(os.environ.get("PEBRIEF_PORT", "8765"))
 os.makedirs(DATA, exist_ok=True)
@@ -137,7 +137,7 @@ def create_campaign(title: str = Form(...), brief: str = Form(...), fee: float =
     if logo is not None and logo.filename:
         d = os.path.join(DATA, "campaigns", cid)
         os.makedirs(d, exist_ok=True)
-        logo_path = os.path.join(d, "logo" + os.path.splitext(logo.filename)[1].lower())
+        logo_path = os.path.join(d, "logo" + safe_ext(logo.filename, IMAGE_EXT, ".png"))
         with open(logo_path, "wb") as fh:
             shutil.copyfileobj(logo.file, fh)
         try:
@@ -205,30 +205,55 @@ def process(sid: str):
     with db_lock, db() as c:
         c.execute("update submissions set verdict=?, status=? where id=?",
                   (json.dumps(v, ensure_ascii=False), status, sid))
-        if status == "aprobat":
+        # Onorariul e per creator: o a doua variantă aprobată a aceluiași creator nu mai rezervă încă unul.
+        already = c.execute("select 1 from submissions where campaign=? and creator=? and id<>? "
+                            "and status in ('aprobat', 'plătit')", (s["campaign"], s["creator"], sid)).fetchone()
+        if status == "aprobat" and not already:
             c.execute("insert into ledger(campaign, submission, kind, amount, note, at) values(?,?,?,?,?,?)",
                       (s["campaign"], sid, "blocat", camp["fee"],
                        f"{s['creator']}: draft aprobat, onorariul e rezervat până la publicare", time.time()))
     progress.pop(sid, None)
 
 
+def resume_pending():
+    """Un server oprit în timpul unei verificări lasă drafturi „în verificare”. La pornire le verificăm din nou."""
+    with db() as c:
+        ids = [r["id"] for r in c.execute(
+            "select id from submissions where status='în verificare' order by created").fetchall()]
+    for sid in ids:
+        progress[sid] = {"p": 0.0, "msg": "În coadă"}
+        pool.submit(process, sid)
+
+
+VIDEO_EXT = {".mp4", ".mov", ".m4v", ".webm", ".mkv", ".3gp", ".avi"}
+IMAGE_EXT = {".png", ".jpg", ".jpeg", ".webp", ".bmp"}
+
+
+def safe_ext(filename: str | None, allowed: set[str], default: str) -> str:
+    """Extensia fișierului încărcat, doar dacă e una așteptată: un „x.html” nu ajunge servit ca pagină."""
+    ext = os.path.splitext(filename or "")[1].lower()
+    return ext if ext in allowed else default
+
+
 @app.post("/api/campaigns/{cid}/submissions")
 def submit(cid: str, creator: str = Form(...), caption: str = Form(""), video: UploadFile = File(...)):
+    creator = creator.strip()  # tastatura telefonului lasă des un spațiu după nume
+    if not creator:
+        raise HTTPException(400, "scrie-ți numele sau contul")
     with db() as c:
         if not c.execute("select 1 from campaigns where id=?", (cid,)).fetchone():
             raise HTTPException(404, "campania nu există")
-        attempt = c.execute("select count(*) from submissions where campaign=? and creator=?",
-                            (cid, creator)).fetchone()[0] + 1
     sid = uuid.uuid4().hex[:10]
     d = os.path.join(DATA, "submissions", sid)
     os.makedirs(d, exist_ok=True)
-    ext = os.path.splitext(video.filename or "")[1].lower() or ".mp4"
-    path = os.path.join(d, "video" + ext)
+    path = os.path.join(d, "video" + safe_ext(video.filename, VIDEO_EXT, ".mp4"))
     with open(path, "wb") as fh:
         shutil.copyfileobj(video.file, fh)
     with db_lock, db() as c:
+        attempt = c.execute("select count(*) from submissions where campaign=? and creator=?",
+                            (cid, creator)).fetchone()[0] + 1
         c.execute("insert into submissions(id, campaign, creator, caption, video, status, attempt, created) "
-                  "values(?,?,?,?,?,?,?,?)", (sid, cid, creator.strip(), caption, to_stored(path, DATA),
+                  "values(?,?,?,?,?,?,?,?)", (sid, cid, creator, caption, to_stored(path, DATA),
                                               "în verificare", attempt, time.time()))
     progress[sid] = {"p": 0.0, "msg": "În coadă"}
     pool.submit(process, sid)
@@ -263,17 +288,22 @@ def get_frame(sid: str, ms: int):
 
 @app.post("/api/submissions/{sid}/publish")
 def publish(sid: str, link: str = Form(...)):
-    with db() as c:
-        s = c.execute("select * from submissions where id=?", (sid,)).fetchone()
-        if not s:
-            raise HTTPException(404)
-        camp = c.execute("select * from campaigns where id=?", (s["campaign"],)).fetchone()
-    if s["status"] != "aprobat":
-        raise HTTPException(400, "doar un draft aprobat poate fi publicat")
+    link = link.strip()
     if not link.startswith(("http://", "https://")):
         raise HTTPException(400, "linkul trebuie să înceapă cu https://")
     now = time.time()
+    # Citirea statusului și plata se fac sub același lacăt: un dublu clic pe „Am postat”
+    # trimite două cereri deodată, iar amândouă ar vedea „aprobat” și ar plăti.
     with db_lock, db() as c:
+        s = c.execute("select * from submissions where id=?", (sid,)).fetchone()
+        if not s:
+            raise HTTPException(404)
+        if s["status"] != "aprobat":
+            raise HTTPException(400, "doar un draft aprobat poate fi publicat")
+        if c.execute("select 1 from submissions where campaign=? and creator=? and status='plătit'",
+                     (s["campaign"], s["creator"])).fetchone():
+            raise HTTPException(400, f"onorariul pentru {s['creator']} e deja plătit în campania asta")
+        camp = c.execute("select * from campaigns where id=?", (s["campaign"],)).fetchone()
         c.execute("update submissions set status='plătit', link=?, paid_at=? where id=?", (link, now, sid))
         c.execute("insert into ledger(campaign, submission, kind, amount, note, at) values(?,?,?,?,?,?)",
                   (s["campaign"], sid, "plătit", camp["fee"], f"{s['creator']}: publicat la {link}", now))
@@ -311,6 +341,7 @@ def seed_demo():
 init_db()
 migrate_paths()
 seed_demo()
+resume_pending()
 app.mount("/", StaticFiles(directory=os.path.join(ROOT, "static"), html=True), name="static")
 
 if __name__ == "__main__":
