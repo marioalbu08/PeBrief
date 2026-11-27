@@ -38,6 +38,8 @@ Adevărul e cunoscut cadru cu cadru. Regulile verificate sunt 9 pe clip: durata 
 - **c028:** „Brisa Zero” a fost auzit „biza zero”, deci fraza e marcată ca lipsă. Tot în direcția sigură; clipul pica oricum din alt motiv.
 - **c015:** logo-ul a fost numărat 3,2 s în loc de 1,9 s, din cauza unor potriviri false pe texturi și pe logo-ul-capcană. Clipul a picat oricum din alt motiv, dar verificarea de logo era greșită în direcția periculoasă. **Reparat după rularea finală** (verificare fotometrică, mai jos). Cu reparația, logo-ul pe setul final e **30/30**, dar setul final nu mai e complet nevăzut pentru reparația asta.
 
+**Re-rulat pe 27 noiembrie 2026**, după recenzia codului (12 buguri reparate, vezi README), pe același set final: 28/30 verdicte complet corecte, 0 aprobări greșite, logo 30/30, precizie/recall pe cadre 0,96 / 0,93, eroare mediană la logo 0,08 s. Rezultatul e identic, clip cu clip, cu rularea făcută înainte de reparații. Era de așteptat: setul n-are clipuri cu cadre pe secundă variabile, logo la finalul clipului, alt alfabet sau „@” în descriere. Rezultatele sunt în `eval/results-final-rerun.json`.
+
 ## Ce am schimbat pe baza măsurătorilor
 
 | Schimbarea | Înainte → după | Pe ce set am măsurat |
